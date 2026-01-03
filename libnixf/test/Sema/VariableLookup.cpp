@@ -482,4 +482,103 @@ TEST_F(VLATest, Constant_UnderscoreStrippedInBuiltins) {
   ASSERT_EQ(Diags.size(), 0);
 }
 
+TEST_F(VLATest, Issue731) {
+  // https://github.com/nix-community/nixd/issues/731
+  const char *Src = R"(
+let
+  e =
+    let
+    in
+    2.718;
+in
+e
+  )";
+
+  std::shared_ptr<Node> AST = parse(Src, Diags);
+  VariableLookupAnalysis VLA(Diags);
+  VLA.runOnAST(*AST);
+
+  ASSERT_EQ(Diags.size(), 0);
+}
+
+TEST_F(VLATest, PrimOp_Inherit_NoWarning) {
+  const char *Src = R"(
+  let
+    inherit (builtins) functionArgs;
+  in functionArgs
+  )";
+
+  std::shared_ptr<Node> AST = parse(Src, Diags);
+  VariableLookupAnalysis VLA(Diags);
+  VLA.runOnAST(*AST);
+  ASSERT_EQ(Diags.size(), 0);
+}
+
+TEST_F(VLATest, PrimOp_Inherit_PrefixNoWarning) {
+  const char *Src = R"(
+  let
+    othername = builtins;
+    inherit (othername) functionArgs;
+  in functionArgs
+  )";
+
+  std::shared_ptr<Node> AST = parse(Src, Diags);
+  VariableLookupAnalysis VLA(Diags);
+  VLA.runOnAST(*AST);
+  ASSERT_EQ(Diags.size(), 0);
+}
+
+TEST_F(VLATest, PrimOp_Inherit_MatchWarning_LessThan) {
+  const char *Src = R"(
+  let
+    othername = builtins;
+    inherit (othername) __lessThan;
+  in __lessThan
+  )";
+
+  std::shared_ptr<Node> AST = parse(Src, Diags);
+  VariableLookupAnalysis VLA(Diags);
+  VLA.runOnAST(*AST);
+  ASSERT_EQ(Diags.size(), 1);
+  ASSERT_EQ(Diags[0].kind(), Diagnostic::DK_PrimOpOverridden);
+}
+
+TEST_F(VLATest, PrimOp_Inherit_MatchWarning_Map) {
+  const char *Src = R"(
+  let
+    othername = builtins;
+    inherit (othername) map;
+  in map
+  )";
+
+  std::shared_ptr<Node> AST = parse(Src, Diags);
+  VariableLookupAnalysis VLA(Diags);
+  VLA.runOnAST(*AST);
+  ASSERT_EQ(Diags.size(), 1);
+  ASSERT_EQ(Diags[0].kind(), Diagnostic::DK_PrimOpOverridden);
+}
+
+TEST_F(VLATest, PrimOp_Inherit_NonVar) {
+  const char *Src = R"(
+  let
+    othername.a = builtins;
+    inherit (othername.a) foo;
+  in foo
+  )";
+
+  std::shared_ptr<Node> AST = parse(Src, Diags);
+  VariableLookupAnalysis VLA(Diags);
+  VLA.runOnAST(*AST);
+  ASSERT_EQ(Diags.size(), 0);
+}
+
+TEST_F(VLATest, PrimOp_Override_Namespace) {
+  const char *Src = R"({ path, ...}: path)";
+
+  std::shared_ptr<Node> AST = parse(Src, Diags);
+  VariableLookupAnalysis VLA(Diags);
+  VLA.runOnAST(*AST);
+  ASSERT_EQ(Diags.size(), 0);
+}
+
 } // namespace
