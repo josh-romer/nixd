@@ -1,6 +1,6 @@
 # RUN: nixd --lit-test < %s | FileCheck %s
 
-Test that invalid identifiers cannot be unquoted in let bindings (e.g., "123" should NOT offer unquote action)
+Test `add to formals` action with multiple existing formals.
 
 <-- initialize(0)
 
@@ -22,8 +22,8 @@ Test that invalid identifiers cannot be unquoted in let bindings (e.g., "123" sh
 
 <-- textDocument/didOpen
 
-```nix file:///unquote-let-invalid.nix
-let "123" = 1; in x
+```nix file:///multiple-formals.nix
+{a, b, c}: d
 ```
 
 <-- textDocument/codeAction(2)
@@ -36,16 +36,16 @@ let "123" = 1; in x
    "method":"textDocument/codeAction",
    "params":{
       "textDocument":{
-         "uri":"file:///unquote-let-invalid.nix"
+         "uri":"file:///multiple-formals.nix"
       },
       "range":{
          "start":{
             "line": 0,
-            "character":4
+            "character": 11
          },
          "end":{
             "line":0,
-            "character":9
+            "character": 12
          }
       },
       "context":{
@@ -56,15 +56,14 @@ let "123" = 1; in x
 }
 ```
 
-Invalid identifiers (starting with digit) should NOT offer unquote action.
-However, a quickfix for unused binding may still be offered.
+The action should insert `, d` after the last formal `c`.
 
 ```
-     CHECK:   "id": 2,
-CHECK-NEXT:   "jsonrpc": "2.0",
-CHECK-NEXT:   "result": [
-CHECK-NOT:   "title": "unquote attribute name"
-     CHECK:   "title": "remove unused binding"
+     CHECK: "id": 2,
+     CHECK: "newText": ", d",
+     CHECK: "isPreferred": true,
+     CHECK: "kind": "quickfix",
+     CHECK: "title": "add `d` to formals"
 ```
 
 ```json

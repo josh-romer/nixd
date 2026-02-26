@@ -1,6 +1,6 @@
 # RUN: nixd --lit-test < %s | FileCheck %s
 
-Test that invalid identifiers cannot be unquoted in let bindings (e.g., "123" should NOT offer unquote action)
+Test that NO action is offered when lambda uses simple arg style `x: body` without formals.
 
 <-- initialize(0)
 
@@ -22,8 +22,8 @@ Test that invalid identifiers cannot be unquoted in let bindings (e.g., "123" sh
 
 <-- textDocument/didOpen
 
-```nix file:///unquote-let-invalid.nix
-let "123" = 1; in x
+```nix file:///no-formals.nix
+x: y
 ```
 
 <-- textDocument/codeAction(2)
@@ -36,16 +36,16 @@ let "123" = 1; in x
    "method":"textDocument/codeAction",
    "params":{
       "textDocument":{
-         "uri":"file:///unquote-let-invalid.nix"
+         "uri":"file:///no-formals.nix"
       },
       "range":{
          "start":{
             "line": 0,
-            "character":4
+            "character": 3
          },
          "end":{
             "line":0,
-            "character":9
+            "character": 4
          }
       },
       "context":{
@@ -56,15 +56,11 @@ let "123" = 1; in x
 }
 ```
 
-Invalid identifiers (starting with digit) should NOT offer unquote action.
-However, a quickfix for unused binding may still be offered.
+Simple lambda `x: y` has no formals set (curly brace style), so no add-to-formals action should be offered.
 
 ```
      CHECK:   "id": 2,
-CHECK-NEXT:   "jsonrpc": "2.0",
-CHECK-NEXT:   "result": [
-CHECK-NOT:   "title": "unquote attribute name"
-     CHECK:   "title": "remove unused binding"
+CHECK-NOT:   "add `y` to formals"
 ```
 
 ```json

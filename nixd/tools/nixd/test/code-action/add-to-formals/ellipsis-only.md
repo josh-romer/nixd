@@ -1,6 +1,6 @@
 # RUN: nixd --lit-test < %s | FileCheck %s
 
-Test that invalid identifiers cannot be unquoted in let bindings (e.g., "123" should NOT offer unquote action)
+Test `add to formals` action with ellipsis-only formals `{ ... }`.
 
 <-- initialize(0)
 
@@ -22,8 +22,8 @@ Test that invalid identifiers cannot be unquoted in let bindings (e.g., "123" sh
 
 <-- textDocument/didOpen
 
-```nix file:///unquote-let-invalid.nix
-let "123" = 1; in x
+```nix file:///ellipsis-only.nix
+{ ... }: y
 ```
 
 <-- textDocument/codeAction(2)
@@ -36,16 +36,16 @@ let "123" = 1; in x
    "method":"textDocument/codeAction",
    "params":{
       "textDocument":{
-         "uri":"file:///unquote-let-invalid.nix"
+         "uri":"file:///ellipsis-only.nix"
       },
       "range":{
          "start":{
             "line": 0,
-            "character":4
+            "character": 9
          },
          "end":{
             "line":0,
-            "character":9
+            "character": 10
          }
       },
       "context":{
@@ -56,15 +56,14 @@ let "123" = 1; in x
 }
 ```
 
-Invalid identifiers (starting with digit) should NOT offer unquote action.
-However, a quickfix for unused binding may still be offered.
+The action should insert `y, ` before the ellipsis.
 
 ```
-     CHECK:   "id": 2,
-CHECK-NEXT:   "jsonrpc": "2.0",
-CHECK-NEXT:   "result": [
-CHECK-NOT:   "title": "unquote attribute name"
-     CHECK:   "title": "remove unused binding"
+     CHECK: "id": 2,
+     CHECK: "newText": "y, ",
+     CHECK: "isPreferred": true,
+     CHECK: "kind": "quickfix",
+     CHECK: "title": "add `y` to formals"
 ```
 
 ```json
